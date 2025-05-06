@@ -58,14 +58,14 @@ ui <- fluidPage(
       h2("Laboratorio"),
       numericInput("na", "Na (mmol/L)", value = NA),
       numericInput("k", "K (mmol/L)", value = NA),
+      numericInput("ca", "Ca (mg/dL)", value = NA),
+      numericInput("cai", "Ca ionico (mmol/L)", value = NA),
+      numericInput("mg", "Mg (mg/dL)", value = NA),
       numericInput("cl", "Cl (mmol/L)", value = NA),
       numericInput("fosforo", "PO4 (mg/dL)", value = NA),
-      numericInput("mg", "Mg (mg/dL)", value = NA),
       numericInput("hcto", "Hematocrito (%)", value = NA),
       numericInput("nus", "NUS (mg/dL)", value = NA),
       numericInput("cr", "Creatinina (mg/dL)", value = NA),
-      numericInput("ca", "Ca (mg/dL)", value = NA),
-      numericInput("cai", "Ca ionico (mmol/L)", value = NA),
       numericInput("hco3", "HCO3 (mmol/L)", value = NA),
       numericInput("lactato", "Lactato (mmol/L)", value = NA),
       # Soportes
@@ -88,15 +88,22 @@ ui <- fluidPage(
                   choices = c("citrato regional","lavados","heparina")),
       numericInput("extraccion", "Extracción para balance (ml/24h)", value = NA),
       numericInput("dosis_efluente", "Dosis de efluente (ml/kg/h)", value = NA),
-      numericInput("dosis_uf", "Dosis de UF (ml/kg/h)", value = NA),
+      # numericInput("dosis_uf", "Dosis de UF (ml/kg/h)", value = NA),  # bamos a generar la dosis de UF automaticamente
+      # Lavados con SSN / Heparina
+      conditionalPanel(
+        h3("Lavados con SSN / Heparina"),
+        condition = "input.preservacion == 'citrato regional'| input.preservacion == 'heparina'",
       numericInput("qb", "Qb (ml/min)", value = 160),
       numericInput("pre_prismasate", "Predilución Prismasate (%)", value = NA),
       selectInput("tipo_pre", "Tipo predilución", choices = c("4/2.5","2/0")),
       numericInput("pos_prismasate", "Posdilución Prismasate (%)", value = NA),
       selectInput("tipo_pos", "Tipo posdilución", choices = c("4/2.5","2/0")),
       numericInput("hd_prismasate", "HD Prismasate (%)", value = NA),
-      selectInput("tipo_hd", "Tipo HD", choices = c("4/2.5","2/0")),
+      selectInput("tipo_hd", "Tipo HD", choices = c("4/2.5","2/0"))
+      ),
+      # Citrato
       conditionalPanel(
+        h3("Citrato"),
         condition = "input.preservacion == 'citrato regional'",
         numericInput("pos_prismocal", "Posdilución Prism0cal (%)", value = NA),
         numericInput("hd_prismocal", "Hemodiálisis Prism0cal (%)", value = NA)
@@ -133,6 +140,8 @@ server <- function(input, output, session) {
     
     balance <- tryCatch(input$administrados - input$eliminados, error = function(e) NA)
     gap_uf  <- tryCatch(round((input$uf_meta - input$uf_24h) / input$uf_meta * 100, 1), error = function(e) NA)
+    dosis_uf <- tryCatch((input$extraccion / input$peso) / 24, error = function(e) NA)
+ 
     
     # Generación de la nota clínica
     nota <- glue_collapse(c(
@@ -194,8 +203,8 @@ server <- function(input, output, session) {
       realizada_por_residente      = input$residente,
       id_residente                 = if (input$residente) input$id_residente else NA,
       observaciones                = input$observaciones,
-      soporte_VP                   = paste(input$soporteVP, collapse = ", "),
-      soporte_V                    = input$soporteV,
+      soporte_vp                   = paste(input$soporteVP, collapse = ", "),
+      soporte_v                    = input$soporteV,
       administrados                = input$administrados,
       eliminados                   = input$eliminados,
       gap_uf                       = gap_uf,
