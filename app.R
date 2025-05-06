@@ -42,6 +42,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       # Datos del paciente
+      h2("Datos del paciente"),
       textInput("id_paciente", "ID del paciente"),
       dateInput("fecha", "Fecha del registro", value = Sys.Date()),
       numericInput("peso", "Peso (kg)", value = NA),
@@ -54,6 +55,7 @@ ui <- fluidPage(
       numericInput("dosis_prescrita", "Dosis prescrita (ml/kg/h)", value = NA),
       numericInput("dosis_entregada", "Dosis entregada (ml/kg/h)", value = NA),
       # Laboratorios
+      h2("Laboratorio"),
       numericInput("fosforo", "PO4 (mg/dL)", value = NA),
       numericInput("mg", "Mg (mg/dL)", value = NA),
       numericInput("k", "K (mmol/L)", value = NA),
@@ -67,6 +69,7 @@ ui <- fluidPage(
       numericInput("cr", "Creatinina (mg/dL)", value = NA),
       numericInput("hcto", "Hematocrito (%)", value = NA),
       # Soportes
+      h2("Soportes"),
       checkboxGroupInput("soporteVP", "Soporte vasopresor",
                          choices = c(
                            "Norepinefrina" = "norepi",
@@ -78,6 +81,7 @@ ui <- fluidPage(
       selectInput("soporteV", "Soporte ventilatorio",
                   choices = c("VMI","VMNI","Máscara alto flujo","Cánula nasal","Sin soporte")),
       # Prescripción TRRC
+      h2("Prescripción TRRC"),
       selectInput("modalidad", "Modalidad TRRC",
                   choices = c("HDFVVC","HFVVC","HDVVC","SCUF")),
       selectInput("preservacion", "Preservación",
@@ -111,6 +115,9 @@ ui <- fluidPage(
     )
   )
 )
+
+
+
 
 server <- function(input, output, session) {
   observeEvent(input$guardar, {
