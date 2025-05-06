@@ -212,7 +212,15 @@ server <- function(input, output, session) {
       nota_clinica_generada        = nota
     )
     
-    print(toJSON(datos, auto_unbox = TRUE))
+    
+    # datos <- list(
+    #   k_mmol_l = ifelse(is.na(input$k), NULL, as.numeric(input$k)),
+    #   na_mmol_l = ifelse(is.na(input$na), NULL, as.numeric(input$na))
+    # )
+   
+    # Convertir NA a NULL
+    datos <- lapply(datos, function(x) if (is.na(x)) NULL else x)
+    
     
     # Envío a Supabase
     res <- POST(
