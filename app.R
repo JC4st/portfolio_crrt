@@ -5,14 +5,14 @@ library(stringr)
 library(glue)
 
 # Función condicional para el plan según estrategia de preservación
-plan_preservacion <- function(input) {
+plan_preservacion <- function(input, dosis_uf) {
   if (input$preservacion == "citrato regional") {
     glue_collapse(c(
       "Citrato en PBP; dosis titulable de acuerdo a calcio posfiltro",
       if (!is.na(input$pos_prismocal)) glue("Posdilución {input$pos_prismocal}% con Prism0cal") else NULL,
       if (!is.na(input$hd_prismocal))   glue("Hemodiálisis {input$hd_prismocal}% con Prism0cal") else NULL,
       glue("Extracción de líquido para balance {input$extraccion} en 24 horas"),
-      # glue("Dosis de ultrafiltración {input$dosis_uf} mL/kg/h"),
+      glue("Dosis de ultrafiltración {dosis_uf} mL/kg/h"),
       "Dosis de efluente 110 ml/Kg/min",
       glue("Dosis de efluente {input$dosis_efluente} mL/kg/h"),
       glue("Qb {input$qb} mL/min"),
@@ -92,7 +92,7 @@ ui <- fluidPage(
       # Lavados con SSN / Heparina
       conditionalPanel(
         h3("Lavados con SSN / Heparina"),
-        condition = "input.preservacion == 'citrato regional'| input.preservacion == 'heparina'",
+        condition = "input.preservacion == 'lavados'| input.preservacion == 'heparina'",
       numericInput("qb", "Qb (ml/min)", value = 160),
       numericInput("pre_prismasate", "Predilución Prismasate (%)", value = NA),
       selectInput("tipo_pre", "Tipo predilución", choices = c("4/2.5","2/0")),
@@ -158,7 +158,7 @@ server <- function(input, output, session) {
       glue("NUS {input$nus} mg/dL | Creatinina {input$cr} mg/dL | Hcto {input$hcto}%"),
       "PLAN:",
       glue("{input$modalidad} con preservación: {input$preservacion}"),
-      plan_preservacion(input)
+      plan_preservacion(input, dosis_uf)
     ), sep = "\n")
     
     output$texto_final <- renderText(nota)
