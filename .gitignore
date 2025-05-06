@@ -5,3 +5,4 @@
 *.Rproj
 *.sqlite
 *.DS_Store
+keys.R

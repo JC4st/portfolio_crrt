@@ -33,8 +33,9 @@ plan_preservacion <- function(input, dosis_uf) {
 }
 
 # Cargar variables de entorno para mayor seguridad
-supabase_url <- "https://cwpcpdgjncvtghmgwvix.supabase.co"
-supabase_key <- "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN3cGNwZGdqbmN2dGdobWd3dml4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMyODAyMTksImV4cCI6MjA1ODg1NjIxOX0.Vikhe8J17HdSlJQ3e5VdgTsAsrSEHOhTFfhrmqjKt1w"
+source("keys.R")
+supabase_url <- supabase_url_secret
+supabase_key <- supabase_key_secret
 tabla <- "datos_trrc"
 
 ui <- fluidPage(
@@ -169,7 +170,7 @@ server <- function(input, output, session) {
       fecha                        = as.character(input$fecha),
       peso_kg                      = input$peso,
       horas_funcionamiento_filtro  = input$horas_filtro,
-      diuresis_ml_dia              = input$diuresis,
+      diuresis_ml_dia              = as.integer(input$diuresis),
       balance_hidrico_ml           = balance,
       uf_24h_ml                    = input$uf_24h,
       uf_meta_prev_ml              = input$uf_meta,
@@ -180,8 +181,8 @@ server <- function(input, output, session) {
       k_mmol_l                     = input$k,
       na_mmol_l                    = input$na,
       cl_mmol_l                    = input$cl,
-      calcio_total                 = input$ca,
-      calcio_ionico                = input$cai,
+      calcio_total                 = as.numeric(input$ca),
+      calcio_ionico                = as.numeric(input$cai),
       lactato_mmol_l               = input$lactato,
       hco3_mmol_l                  = input$hco3,
       nus_mg_dl                    = input$nus,
@@ -191,7 +192,7 @@ server <- function(input, output, session) {
       estrategia_anticoagulacion   = input$preservacion,
       pos_prismocal_pct            = input$pos_prismocal,
       hd_prismocal_pct             = input$hd_prismocal,
-      extraccion_liquido_24h_ml    = input$extraccion,
+      extraccion_liquido_24h_ml    = as.integer(input$extraccion),
       dosis_uf_ml_kg_h             = input$dosis_uf,
       qb_ml_min                    = input$qb,
       pre_prismasate_pct           = input$pre_prismasate,
@@ -211,6 +212,8 @@ server <- function(input, output, session) {
       nota_clinica_generada        = nota
     )
     
+    print(toJSON(datos, auto_unbox = TRUE))
+    
     # Envío a Supabase
     res <- POST(
       url    = paste0(supabase_url, "/rest/v1/", tabla),
@@ -222,6 +225,9 @@ server <- function(input, output, session) {
       ),
       body = toJSON(datos, auto_unbox = TRUE)
     )
+    
+    # Imprimir respuesta completa
+    print(content(res, as = "text"))
     
     resultado <- content(res, as = "parsed", simplifyVector = TRUE)
     mensaje <- if (!is.null(resultado$id_paciente)) {
