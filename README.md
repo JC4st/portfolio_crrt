@@ -1,51 +1,52 @@
-# Portafolio TRRC (Terapia de Reemplazo Renal Continua)
 
-Este proyecto es una aplicación clínica desarrollada en **R + Shiny**, diseñada para:
+# Portafolio de Terapia de Reemplazo Renal Continua (TRRC)
 
-✅ Registrar diariamente parámetros clínicos y terapéuticos de pacientes en TRRC  
-✅ Generar automáticamente una **nota clínica estructurada** para la historia clínica  
-✅ Almacenar los datos en **Supabase** para su posterior análisis  
-✅ Servir como **portafolio de actividades** para residentes de nefrología en formación
+Esta aplicación `Shiny` permite registrar parámetros clínicos diarios, calcular indicadores de calidad, y generar automáticamente una nota estructurada para la historia clínica en pacientes en TRRC.
 
 ---
 
-## ✨ Funcionalidades principales
+## ✅ Características principales
 
-- Formulario Shiny interactivo con validaciones básicas
+- Registro diario de variables clínicas, bioquímicas y técnicas
 - Cálculo automático de:
   - Gap de ultrafiltración (`gap_uf`)
-  - Índice de calcio (cuando se usa citrato)
-- Generación de plan terapéutico adaptado a la estrategia de preservación del filtro
-- Almacenamiento en Supabase con trazabilidad por residente
-- Lógica de conexión robusta con validación de errores en Supabase
+  - Dosis de ultrafiltración (`dosis_uf`)
+- Generación de nota clínica estructurada y editable
+- Adaptación del plan de tratamiento según modalidad y tipo de anticoagulación
+- Conexión directa a base de datos Supabase
+- Validaciones robustas para evitar errores al guardar
 
 ---
 
-## 💻 Requisitos
+## 📦 Estructura de la app
 
-- R (≥ 4.0)
-- Paquetes:
-  - `shiny`
-  - `httr`
-  - `jsonlite`
-  - `stringr`
-  - `glue`
-  
----
-
-## 🧪 Estado actual
-
-- [x] Registro diario funcional
-- [x] Integración con Supabase
-- [x] Validación robusta de respuestas
-- [ ] Vista de datos por paciente/residente (en desarrollo)
-- [ ] Exportación en PDF o impresión de notas (planeado)
+- `plan_preservacion(input, dosis_uf)`: Función que adapta el plan terapéutico al tipo de preservación (citrato vs. heparina/lavados)
+- `observeEvent(input$guardar, {...})`: Contiene la lógica para:
+  - Validar inputs esenciales
+  - Calcular dosis y gap
+  - Construir la nota clínica con `glue_collapse()`
+  - Enviar datos a Supabase como JSON
 
 ---
 
-## 📚 Autores y créditos
+## 🛠️ Validaciones implementadas
 
-Proyecto desarrollado por **Juan Castellanos de la Hoz**, nefrólogo clínico y educador en la Universidad del Rosario y Fundación Cardioinfantil (Bogotá, Colombia).  
-Desarrollado como parte de su portafolio de evaluación para el MSc Clinical Education (University of Edinburgh).
+- `req(input$id_paciente, input$fecha)`: previene registros incompletos
+- `tryCatch(...)`: protege cálculos contra divisiones inválidas
+- `lapply(..., if NA then NULL)`: asegura compatibilidad JSON con Supabase
+
+---
+
+## 🚀 Despliegue
+
+1. Crear base de datos en Supabase con columnas listadas en `datos <- list(...)`
+2. Configurar claves de API y URL
+3. Desplegar en shinyapps.io o correr localmente con `shiny::runApp("app.R")`
+
+---
+
+## ✍️ Autor
+
+Desarrollado por **Juan Castellanos de la Hoz**, nefrólogo y educador clínico en Universidad del Rosario y Fundación Cardioinfantil, como parte de su proyecto académico en el MSc Clinical Education (University of Edinburgh).
 
 ---
