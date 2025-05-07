@@ -15,7 +15,7 @@ plan_preservacion <- function(input, dosis_uf) {
       glue("Dosis de ultrafiltración {dosis_uf} mL/kg/h"),
       "Dosis de efluente 110 ml/Kg/min",
       glue("Dosis de efluente {input$dosis_efluente} mL/kg/h"),
-      glue("Qb {input$qb} mL/min"),
+      "Qb 110 mL/min",
       "Control de gases venosos cada 4 h para control de calcio iónico pre y posfiltro.",
       "Antagonismo de citrato con gluconato de calcio en jeringa 100% de compensación (dosis de inicio, posterior titulación)",
       "Se formula 50 mg de gluconato de Ca para circuito"
@@ -33,7 +33,10 @@ plan_preservacion <- function(input, dosis_uf) {
 }
 
 # Cargar variables de entorno para mayor seguridad
+# source("keys.R")
+
 source("keys.R")
+
 supabase_url <- supabase_url_secret
 supabase_key <- supabase_key_secret
 tabla <- "datos_trrc"
@@ -43,7 +46,7 @@ ui <- fluidPage(
   sidebarLayout(
     sidebarPanel(
       # Datos del paciente
-      h2("Datos del paciente"),
+      h2("🛌 Datos del paciente"),
       textInput("id_paciente", "ID del paciente"),
       dateInput("fecha", "Fecha del registro", value = Sys.Date()),
       numericInput("peso", "Peso (kg)", value = NA),
@@ -56,7 +59,7 @@ ui <- fluidPage(
       numericInput("dosis_prescrita", "Dosis prescrita (ml/kg/h)", value = NA),
       numericInput("dosis_entregada", "Dosis entregada (ml/kg/h)", value = NA),
       # Laboratorios
-      h2("Laboratorio"),
+      h2("🔬 Laboratorio"),
       numericInput("na", "Na (mmol/L)", value = NA),
       numericInput("k", "K (mmol/L)", value = NA),
       numericInput("ca", "Ca (mg/dL)", value = NA),
@@ -70,21 +73,22 @@ ui <- fluidPage(
       numericInput("hco3", "HCO3 (mmol/L)", value = NA),
       numericInput("lactato", "Lactato (mmol/L)", value = NA),
       # Soportes
-      h2("Soportes"),
+      h2("🆘 Soportes"),
       checkboxGroupInput("soporteVP", "Soporte vasopresor",
                          choices = c(
                            "Norepinefrina" = "norepi",
                            "Vasopresina"      = "vaso",
                            "Dobutamina"       = "db",
                            "Levosimendán"     = "lvmd",
-                           "Balón contrapulsación" = "bcp"
-                         )),
+                           "Balón contrapulsación" = "bcp",
+                           "Sin soporte" = "no"), 
+                         selected = c("no")),
       selectInput("soporteV", "Soporte ventilatorio",
                   choices = c("VMI","VMNI","Máscara alto flujo","Cánula nasal","Sin soporte")),
       # Prescripción TRRC
-      h2("Prescripción TRRC"),
+      h2("℞ Prescripción TRRC"),
       selectInput("modalidad", "Modalidad TRRC",
-                  choices = c("HDFVVC","HFVVC","HDVVC","SCUF")),
+                  choices = c("🔵🔴 HDFVVC","🔴 HFVVC","🔵 HDVVC","🟢 SCUF")),
       selectInput("preservacion", "Preservación",
                   choices = c("citrato regional","lavados","heparina")),
       numericInput("extraccion", "Extracción para balance (ml/24h)", value = NA),
@@ -92,19 +96,19 @@ ui <- fluidPage(
       # numericInput("dosis_uf", "Dosis de UF (ml/kg/h)", value = NA),  # bamos a generar la dosis de UF automaticamente
       # Lavados con SSN / Heparina
       conditionalPanel(
-        h3("Lavados con SSN / Heparina"),
+        h3("🌊 Lavados con SSN / 🩸🟣 Heparina"),
         condition = "input.preservacion == 'lavados'| input.preservacion == 'heparina'",
-      numericInput("qb", "Qb (ml/min)", value = 160),
-      numericInput("pre_prismasate", "Predilución Prismasate (%)", value = NA),
+      numericInput("qb", "Qb (ml/min)", value = 180),
+      numericInput("pre_prismasate", "🔴 Predilución Prismasate (%)", value = NA),
       selectInput("tipo_pre", "Tipo predilución", choices = c("4/2.5","2/0")),
-      numericInput("pos_prismasate", "Posdilución Prismasate (%)", value = NA),
+      numericInput("pos_prismasate", "🔴 Posdilución Prismasate (%)", value = NA),
       selectInput("tipo_pos", "Tipo posdilución", choices = c("4/2.5","2/0")),
-      numericInput("hd_prismasate", "HD Prismasate (%)", value = NA),
+      numericInput("hd_prismasate", "🔵 HD Prismasate (%)", value = NA),
       selectInput("tipo_hd", "Tipo HD", choices = c("4/2.5","2/0"))
       ),
       # Citrato
       conditionalPanel(
-        h3("Citrato"),
+        h3("🍋🧪 Citrato"),
         condition = "input.preservacion == 'citrato regional'",
         numericInput("pos_prismocal", "Posdilución Prism0cal (%)", value = NA),
         numericInput("hd_prismocal", "Hemodiálisis Prism0cal (%)", value = NA)
@@ -139,9 +143,9 @@ server <- function(input, output, session) {
     
     req(input$id_paciente, input$fecha)
     
-    balance <- tryCatch(input$administrados - input$eliminados, error = function(e) NA)
-    gap_uf  <- tryCatch(round((input$uf_meta - input$uf_24h) / input$uf_meta * 100, 1), error = function(e) NA)
-    dosis_uf <- tryCatch((input$extraccion / input$peso) / 24, error = function(e) NA)
+    balance <- tryCatch(input$administrados - input$eliminados, error = function(e) NULL)
+    gap_uf  <- tryCatch(round((input$uf_meta - input$uf_24h) / input$uf_meta * 100, 1), error = function(e) NULL)
+    dosis_uf <- tryCatch((input$extraccion / input$peso) / 24, error = function(e) NULL)
  
     
     # Generación de la nota clínica
@@ -202,7 +206,7 @@ server <- function(input, output, session) {
       hd_prismasate_pct            = input$hd_prismasate,
       tipo_hd_prismasate           = input$tipo_hd,
       realizada_por_residente      = input$residente,
-      id_residente                 = if (input$residente) input$id_residente else NA,
+      id_residente                 =  if (!is.null(input$residente) && isTRUE(input$residente)) input$id_residente else NULL,
       observaciones                = input$observaciones,
       soporte_vp                   = paste(input$soporteVP, collapse = ", "),
       soporte_v                    = input$soporteV,
@@ -212,6 +216,14 @@ server <- function(input, output, session) {
       nota_clinica_generada        = nota
     )
     
+    # 2. Reemplaza NAs y vectores vacíos por NULL
+    datos_nulls <- lapply(datos, function(x) {
+      if (is.null(x) || length(x) == 0 || all(is.na(x))) {
+        NULL
+      } else {
+        x
+      }
+    })
     
     # datos <- list(
     #   k_mmol_l = ifelse(is.na(input$k), NULL, as.numeric(input$k)),
@@ -219,33 +231,37 @@ server <- function(input, output, session) {
     # )
    
     # Convertir NA a NULL
-    datos <- lapply(datos, function(x) if (is.na(x)) NULL else x)
+
+
+    # cuerpo <- jsonlite::toJSON(datos, auto_unbox = TRUE, null = "null")
+    # cat("JSON enviado:", cuerpo, "\n")
+    # 
+    # 1. Filtra NULLs de la lista 'datos'
+    # 3. Elimina por completo las entradas NULL
+    datos_clean <- Filter(Negate(is.null), datos_nulls)
     
-    
-    # Envío a Supabase
-    res <- POST(
+    # 4. Manda el POST con encode = "json"
+    res <- httr::POST(
       url    = paste0(supabase_url, "/rest/v1/", tabla),
-      add_headers(
+      httr::add_headers(
         apikey        = supabase_key,
         Authorization = paste("Bearer", supabase_key),
         `Content-Type`= "application/json",
         Prefer        = "return=representation"
       ),
-      body = toJSON(datos, auto_unbox = TRUE)
+      body   = datos_clean,
+      encode = "json"
     )
     
-    # Imprimir respuesta completa
-    print(content(res, as = "text"))
+    # 5. Debug: imprime el JSON final para verificar que no haya {} ni arrays
+    cat("JSON final a enviar:\n", jsonlite::toJSON(datos_clean, auto_unbox=TRUE, na="null"), "\n")
     
-    resultado <- content(res, as = "parsed", simplifyVector = TRUE)
-    mensaje <- if (!is.null(resultado$id_paciente)) {
-      paste0("✅ Registro guardado exitosamente para el paciente ",
-             resultado$id_paciente,
-             " el día ", resultado$fecha, ".")
+    # 6. Manejo de respuesta
+    if (httr::status_code(res) %in% c(200, 201)) {
+      output$respuesta_supabase <- renderText("✅ Guardado exitoso")
     } else {
-      "⚠️ Error al guardar. Revisa los datos o conexión a Supabase."
+      output$respuesta_supabase <- renderText(paste("⚠️ Error:", content(res, "text")))
     }
-    output$respuesta_supabase <- renderText(mensaje)
     
   })
 }
