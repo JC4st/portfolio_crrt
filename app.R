@@ -12,7 +12,7 @@ plan_preservacion <- function(input, dosis_uf) {
       if (!is.na(input$pos_prismocal)) glue("Posdilución {input$pos_prismocal}% con Prism0cal") else NULL,
       if (!is.na(input$hd_prismocal))   glue("Hemodiálisis {input$hd_prismocal}% con Prism0cal") else NULL,
       glue("Extracción de líquido para balance {input$extraccion} en 24 horas"),
-      glue("Dosis de ultrafiltración {dosis_uf} mL/kg/h"),
+      glue("Dosis de ultrafiltración {round(dosis_uf, 2)} mL/kg/h"),
       "Dosis de efluente 110 ml/Kg/min",
       glue("Dosis de efluente {input$dosis_efluente} mL/kg/h"),
       "Qb 110 mL/min",
@@ -26,7 +26,8 @@ plan_preservacion <- function(input, dosis_uf) {
       if (!is.na(input$pos_prismasate)) glue("Posdilución {input$pos_prismasate}% con Prismasate {input$tipo_pos}") else NULL,
       if (!is.na(input$hd_prismasate))  glue("Hemodiálisis {input$hd_prismasate}% con Prismasate {input$tipo_hd}") else NULL,
       glue("Extracción de líquido para balance {input$extraccion} en 24 horas"),
-      glue("Dosis de ultrafiltración {input$dosis_uf} mL/kg/h"),
+      glue("Dosis de ultrafiltración {round(dosis_uf, 2)} mL/kg/h"),
+      if (!is.na(input$dosis_efluente)) glue("Dosis de efluente {dosis_efluente} mL/kg/h") else NULL,
       glue("Qb {input$qb} mL/min")
     ), sep = "\n")
   }
@@ -92,7 +93,8 @@ ui <- fluidPage(
       selectInput("preservacion", "Preservación",
                   choices = c("citrato regional","lavados","heparina")),
       numericInput("extraccion", "Extracción para balance (ml/24h)", value = NA),
-      numericInput("dosis_efluente", "Dosis de efluente (ml/kg/h)", value = NA),
+      textOutput("dosis_uf_auto"),
+      # numericInput("dosis_efluente", "Dosis de efluente (ml/kg/h)", value = NA),
       # numericInput("dosis_uf", "Dosis de UF (ml/kg/h)", value = NA),  # bamos a generar la dosis de UF automaticamente
       # Lavados con SSN / Heparina
       conditionalPanel(
@@ -146,7 +148,26 @@ server <- function(input, output, session) {
     balance <- tryCatch(input$administrados - input$eliminados, error = function(e) NULL)
     gap_uf  <- tryCatch(round((input$uf_meta - input$uf_24h) / input$uf_meta * 100, 1), error = function(e) NULL)
     dosis_uf <- tryCatch((input$extraccion / input$peso) / 24, error = function(e) NULL)
- 
+    
+    # informacion deactiva sobre dosis de ulrafiltracion
+    
+    dataInput <- reactive({
+      req(input$extraccion, input$peso)
+      list(
+        extraccion = as.numeric(input$extraccion),
+        peso = as.numeric(input$peso)
+      )
+    })
+    
+    output$dosis_uf_auto <- renderText({
+      datos <- dataInput()
+      if (is.null(datos$extraccion) || is.null(datos$peso)) return("⚠️ Datos insuficientes para calcular la dosis de UF.")
+      if (datos$peso <= 0) return("⚠️ Peso debe ser mayor que cero.")
+      if (datos$extraccion <= 0) return("⚠️ Extracción debe ser mayor que cero.")
+      dosis_uf <- (datos$extraccion / datos$peso) / 24
+      paste("Dosis de UF:", round(dosis_uf, 2), "mL/kg/h")
+    })
+    
     
     # Generación de la nota clínica
     nota <- glue_collapse(c(
