@@ -13,7 +13,6 @@ plan_preservacion <- function(input, dosis_uf) {
       if (!is.na(input$hd_prismocal))   glue("Hemodiálisis {input$hd_prismocal}% con Prism0cal") else NULL,
       glue("Extracción de líquido para balance {input$extraccion} en 24 horas"),
       glue("Dosis de ultrafiltración {round(dosis_uf, 2)} mL/kg/h"),
-      "Dosis de efluente 110 ml/Kg/min",
       glue("Dosis de efluente {input$dosis_efluente} mL/kg/h"),
       "Qb 110 mL/min",
       "Control de gases venosos cada 4 h para control de calcio iónico pre y posfiltro.",
@@ -50,7 +49,7 @@ ui <- fluidPage(
       h2("🛌 Datos del paciente"),
       textInput("id_paciente", "ID del paciente"),
       dateInput("fecha", "Fecha del registro", value = Sys.Date()),
-      numericInput("peso", "Peso (kg)", value = NA),
+      numericInput("peso", "Peso (kg)", value = 70),
       numericInput("horas_filtro", "Horas de uso del filtro", value = NA),
       numericInput("administrados", "Líquidos administrados (ml/24h)", value = NA),
       numericInput("eliminados", "Líquidos eliminados (ml/24h)", value = NA),
@@ -92,8 +91,11 @@ ui <- fluidPage(
                   choices = c("🔵🔴 HDFVVC","🔴 HFVVC","🔵 HDVVC","🟢 SCUF")),
       selectInput("preservacion", "Preservación",
                   choices = c("citrato regional","lavados","heparina")),
-      numericInput("extraccion", "Extracción para balance (ml/24h)", value = NA),
-      textOutput("dosis_uf_auto"),
+      numericInput("extraccion", "Extracción para balance (ml/24h)", value = 1000),
+      wellPanel(
+        h4("💦 Ultrafiltracion neta"),
+        textOutput("dosis_uf_auto")
+      ),
       # numericInput("dosis_efluente", "Dosis de efluente (ml/kg/h)", value = NA),
       # numericInput("dosis_uf", "Dosis de UF (ml/kg/h)", value = NA),  # bamos a generar la dosis de UF automaticamente
       # Lavados con SSN / Heparina
@@ -126,15 +128,49 @@ ui <- fluidPage(
     mainPanel(
       verbatimTextOutput("texto_final"),
       verbatimTextOutput("respuesta_supabase")
+      )
     )
   )
-)
+
 
 
 
 
 server <- function(input, output, session) {
-  observeEvent(input$guardar, {
+  dataInput <- reactive({
+    # Validar que las entradas no sean NA o negativas
+    if (is.na(input$extraccion) || is.na(input$peso)) {
+      return(list(error = "⚠️ Complete todos los campos requeridos: extracción y peso."))
+    }
+    if (input$peso <= 0) {
+      return(list(error = "⚠️ El peso debe ser mayor que cero."))
+    }
+    if (input$extraccion <= 0) {
+      return(list(error = "⚠️ La extracción debe ser mayor que cero."))
+    }
+    
+    list(
+      extraccion = as.numeric(input$extraccion),
+      peso = as.numeric(input$peso),
+      error = NULL
+    )
+  })
+  
+  output$dosis_uf_auto <- renderText({
+    datos <- dataInput()
+    
+    # Mostrar errores si existen
+    if (!is.null(datos$error)) {
+      return(datos$error)
+    }
+    
+    # Calcular la dosis de ultrafiltración
+    dosis_uf <- (datos$extraccion / datos$peso) / 24
+    paste("Dosis de UF calculada:", round(dosis_uf, 2), "mL/kg/h")
+  })
+
+  
+    observeEvent(input$guardar, {
     # Validación mínima (descomentar si se desea)
     # validate(
     #   need(input$id_paciente != "", "Falta el ID del paciente"),
@@ -151,22 +187,7 @@ server <- function(input, output, session) {
     
     # informacion deactiva sobre dosis de ulrafiltracion
     
-    dataInput <- reactive({
-      req(input$extraccion, input$peso)
-      list(
-        extraccion = as.numeric(input$extraccion),
-        peso = as.numeric(input$peso)
-      )
-    })
-    
-    output$dosis_uf_auto <- renderText({
-      datos <- dataInput()
-      if (is.null(datos$extraccion) || is.null(datos$peso)) return("⚠️ Datos insuficientes para calcular la dosis de UF.")
-      if (datos$peso <= 0) return("⚠️ Peso debe ser mayor que cero.")
-      if (datos$extraccion <= 0) return("⚠️ Extracción debe ser mayor que cero.")
-      dosis_uf <- (datos$extraccion / datos$peso) / 24
-      paste("Dosis de UF:", round(dosis_uf, 2), "mL/kg/h")
-    })
+
     
     
     # Generación de la nota clínica
