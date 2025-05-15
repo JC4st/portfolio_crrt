@@ -11,7 +11,7 @@ plan_preservacion <- function(input, dosis_uf) {
       "Citrato en PBP; dosis titulable de acuerdo a calcio posfiltro",
       if (!is.na(input$pos_prismocal)) glue("Posdilución {input$pos_prismocal}% con Prism0cal") else NULL,
       if (!is.na(input$hd_prismocal))   glue("Hemodiálisis {input$hd_prismocal}% con Prism0cal") else NULL,
-      glue("Extracción de líquido para balance {input$extraccion} en 24 horas"),
+      glue("Extracción de líquido para balance {input$extraccion} mL en 24 horas"),
       glue("Dosis de ultrafiltración {round(dosis_uf, 2)} mL/kg/h"),
       glue("Dosis de efluente {input$dosis_efluente} mL/kg/h"),
       "Qb 110 mL/min",
@@ -24,9 +24,9 @@ plan_preservacion <- function(input, dosis_uf) {
       if (!is.na(input$pre_prismasate)) glue("Predilución {input$pre_prismasate}% con Prismasate {input$tipo_pre}") else NULL,
       if (!is.na(input$pos_prismasate)) glue("Posdilución {input$pos_prismasate}% con Prismasate {input$tipo_pos}") else NULL,
       if (!is.na(input$hd_prismasate))  glue("Hemodiálisis {input$hd_prismasate}% con Prismasate {input$tipo_hd}") else NULL,
-      glue("Extracción de líquido para balance {input$extraccion} en 24 horas"),
+      glue("Extracción de líquido para balance {input$extraccion} mL en 24 horas"),
       glue("Dosis de ultrafiltración {round(dosis_uf, 2)} mL/kg/h"),
-      if (!is.na(input$dosis_efluente)) glue("Dosis de efluente {dosis_efluente} mL/kg/h") else NULL,
+      if (!is.na(input$dosis_efluente)) glue("Dosis de efluente {input$dosis_efluente} mL/kg/h") else NULL,
       glue("Qb {input$qb} mL/min")
     ), sep = "\n")
   }
@@ -54,8 +54,8 @@ ui <- fluidPage(
       numericInput("administrados", "Líquidos administrados (ml/24h)", value = NA),
       numericInput("eliminados", "Líquidos eliminados (ml/24h)", value = NA),
       numericInput("diuresis", "Diuresis (ml/d)", value = NA),
-      numericInput("uf_24h", "UF lograda (ml/24h)", value = NA),
-      numericInput("uf_meta", "Meta de UF (ml)", value = NA),
+      #numericInput("uf_24h", "UF neta (ml/24h)", value = NA),
+      numericInput("uf_meta", "Meta previa de UFnet (ml)", value = NA),
       numericInput("dosis_prescrita", "Dosis prescrita (ml/kg/h)", value = NA),
       numericInput("dosis_entregada", "Dosis entregada (ml/kg/h)", value = NA),
       # Laboratorios
@@ -89,27 +89,45 @@ ui <- fluidPage(
       h2("℞ Prescripción TRRC"),
       selectInput("modalidad", "Modalidad TRRC",
                   choices = c("🔵🔴 HDFVVC","🔴 HFVVC","🔵 HDVVC","🟢 SCUF")),
+      numericInput("dosis_efluente", "Dosis de efluente (ml/kg/h)", value = 25),
       selectInput("preservacion", "Preservación",
                   choices = c("citrato regional","lavados","heparina")),
-      numericInput("extraccion", "Extracción para balance (ml/24h)", value = 1000),
+      numericInput("extraccion", "Extracción para balance (ml/24h)", value = -1000),
       wellPanel(
-        h4("💦 Ultrafiltracion neta"),
+        h4("💦 Ultrafiltracion neta (UF net)"),
         textOutput("dosis_uf_auto")
       ),
       # numericInput("dosis_efluente", "Dosis de efluente (ml/kg/h)", value = NA),
       # numericInput("dosis_uf", "Dosis de UF (ml/kg/h)", value = NA),  # bamos a generar la dosis de UF automaticamente
+      
       # Lavados con SSN / Heparina
       conditionalPanel(
         h3("🌊 Lavados con SSN / 🩸🟣 Heparina"),
         condition = "input.preservacion == 'lavados'| input.preservacion == 'heparina'",
       numericInput("qb", "Qb (ml/min)", value = 180),
-      numericInput("pre_prismasate", "🔴 Predilución Prismasate (%)", value = NA),
-      selectInput("tipo_pre", "Tipo predilución", choices = c("4/2.5","2/0")),
-      numericInput("pos_prismasate", "🔴 Posdilución Prismasate (%)", value = NA),
-      selectInput("tipo_pos", "Tipo posdilución", choices = c("4/2.5","2/0")),
-      numericInput("hd_prismasate", "🔵 HD Prismasate (%)", value = NA),
-      selectInput("tipo_hd", "Tipo HD", choices = c("4/2.5","2/0"))
+      conditionalPanel(
+        condition = "input.modalidad == '🔵🔴 HDFVVC'",
+        numericInput("pre_prismasate", "🔴 Predilución Prismasate (%)", value = NA),
+        selectInput("tipo_pre", "Tipo predilución", choices = c("4/2.5","2/0")),
+        numericInput("pos_prismasate", "🔴 Posdilución Prismasate (%)", value = NA),
+        selectInput("tipo_pos", "Tipo posdilución", choices = c("4/2.5","2/0")),
+        numericInput("hd_prismasate", "🔵 HD Prismasate (%)", value = NA),
+        selectInput("tipo_hd", "Tipo HD", choices = c("4/2.5","2/0"))
       ),
+      conditionalPanel(
+        condition = "input.modalidad == '🔴 HFVVC'",
+        numericInput("pre_prismasate", "🔴 Predilución Prismasate (%)", value = NA),
+        selectInput("tipo_pre", "Tipo predilución", choices = c("4/2.5","2/0")),
+        numericInput("pos_prismasate", "🔴 Posdilución Prismasate (%)", value = NA),
+        selectInput("tipo_pos", "Tipo posdilución", choices = c("4/2.5","2/0"))
+      ),
+      conditionalPanel(
+        condition = "input.modalidad == '🔵 HDVVC'",
+        numericInput("hd_prismasate", "🔵 HD Prismasate (%)", value = NA),
+        selectInput("tipo_hd", "Tipo HD", choices = c("4/2.5","2/0"))
+        ),
+      ),
+      
       # Citrato
       conditionalPanel(
         h3("🍋🧪 Citrato"),
@@ -145,9 +163,9 @@ server <- function(input, output, session) {
     if (input$peso <= 0) {
       return(list(error = "⚠️ El peso debe ser mayor que cero."))
     }
-    if (input$extraccion <= 0) {
-      return(list(error = "⚠️ La extracción debe ser mayor que cero."))
-    }
+    # if (input$extraccion <= 0) {
+    #   return(list(error = "⚠️ La extracción debe ser mayor que cero."))
+    # }
     
     list(
       extraccion = as.numeric(input$extraccion),
@@ -182,7 +200,7 @@ server <- function(input, output, session) {
     req(input$id_paciente, input$fecha)
     
     balance <- tryCatch(input$administrados - input$eliminados, error = function(e) NULL)
-    gap_uf  <- tryCatch(round((input$uf_meta - input$uf_24h) / input$uf_meta * 100, 1), error = function(e) NULL)
+    gap_uf  <- tryCatch(round((input$uf_meta - balance) / input$uf_meta * 100, 1), error = function(e) NULL)
     dosis_uf <- tryCatch((input$extraccion / input$peso) / 24, error = function(e) NULL)
     
     # informacion deactiva sobre dosis de ulrafiltracion
@@ -193,12 +211,13 @@ server <- function(input, output, session) {
     # Generación de la nota clínica
     nota <- glue_collapse(c(
       "Paciente con terapia de reemplazo renal continuo como soporte vital.",
-      if (!is.na(input$horas_filtro)) glue("Su filtro actual tiene {input$horas_filtro} horas de funcionamiento.") else NULL,
-      if (!is.na(balance))           glue("Balance hídrico: {balance} mL/24h")                     else NULL,
-      if (!is.na(input$diuresis))    glue("Diuresis: {input$diuresis} mL/d")                    else NULL,
+      if (!is.na(input$horas_filtro))    glue("Su filtro actual tiene {input$horas_filtro} horas de funcionamiento.") else NULL,
+      if (!is.na(balance))               glue("UFnet: {balance} mL/24h")                     else NULL,
+      if (!is.na(input$uf_meta))         glue("Meta previa de UFnet : {input$uf_meta} mL/24h") else NULL,
+      if (!is.na(gap_uf))                glue("Gap UFnet: {gap_uf} %")                     else NULL,
+      if (!is.na(input$diuresis))        glue("Diuresis: {input$diuresis} mL/d")                    else NULL,
       if (!is.na(input$dosis_prescrita)) glue("Dosis prescrita: {input$dosis_prescrita} mL/kg/h") else NULL,
       if (!is.na(input$dosis_entregada)) glue("Dosis entregada: {input$dosis_entregada} mL/kg/h") else NULL,
-      if (!is.na(gap_uf))            glue("Gap ultrafiltración: {gap_uf} %")                     else NULL,
       "Perfil laboratorios:",
       glue("PO4 {input$fosforo} mg/dL | Mg {input$mg} mg/dL | K {input$k} mmol/L | Na {input$na} mmol/L | Cl {input$cl} mmol/L"),
       glue("Ca {input$ca} mg/dL | Cai {input$cai} mmol/L | Lactato {input$lactato} mmol/L | HCO3 {input$hco3} mmol/L"),
