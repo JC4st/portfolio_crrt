@@ -3,6 +3,8 @@ library(httr)
 library(jsonlite)
 library(stringr)
 library(glue)
+# en la parte superior de app.R
+library(shinyjs)
 
 # Función condicional para el plan según estrategia de preservación
 plan_preservacion <- function(input, dosis_uf) {
@@ -43,6 +45,7 @@ tabla <- "datos_trrc"
 
 ui <- fluidPage(
   titlePanel("TRRC - Registro + Nota Clínica"),
+  useShinyjs()  ,  # Habilitar shinyjs
   sidebarLayout(
     sidebarPanel(
       # Datos del paciente
@@ -144,8 +147,16 @@ ui <- fluidPage(
       actionButton("guardar", "Guardar todo en Supabase")
     ),
     mainPanel(
-      verbatimTextOutput("texto_final"),
-      verbatimTextOutput("respuesta_supabase")
+      # en UI
+      textAreaInput(
+        "nota_area", 
+        "Nota clínica generada", 
+        value = "",           # se irá actualizando desde el server
+        rows  = 10, 
+        width = "100%"
+      ),
+      actionButton("copy_btn", "📋 Copiar nota"),
+      verbatimTextOutput("respuesta_supabase"),
       )
     )
   )
@@ -155,6 +166,7 @@ ui <- fluidPage(
 
 
 server <- function(input, output, session) {
+  
   dataInput <- reactive({
     # Validar que las entradas no sean NA o negativas
     if (is.na(input$extraccion) || is.na(input$peso)) {
@@ -174,6 +186,7 @@ server <- function(input, output, session) {
     )
   })
   
+  
   output$dosis_uf_auto <- renderText({
     datos <- dataInput()
     
@@ -186,9 +199,9 @@ server <- function(input, output, session) {
     dosis_uf <- (datos$extraccion / datos$peso) / 24
     paste("Dosis de UF calculada:", round(dosis_uf, 2), "mL/kg/h")
   })
-
   
-    observeEvent(input$guardar, {
+  
+  observeEvent(input$guardar, {
     # Validación mínima (descomentar si se desea)
     # validate(
     #   need(input$id_paciente != "", "Falta el ID del paciente"),
@@ -202,9 +215,6 @@ server <- function(input, output, session) {
     balance <- tryCatch(input$administrados - input$eliminados, error = function(e) NULL)
     gap_uf  <- tryCatch(round((input$uf_meta - balance) / input$uf_meta * 100, 1), error = function(e) NULL)
     dosis_uf <- tryCatch((input$extraccion / input$peso) / 24, error = function(e) NULL)
-    
-    # informacion deactiva sobre dosis de ulrafiltracion
-    
 
     
     
@@ -218,6 +228,8 @@ server <- function(input, output, session) {
       if (!is.na(input$diuresis))        glue("Diuresis: {input$diuresis} mL/d")                    else NULL,
       if (!is.na(input$dosis_prescrita)) glue("Dosis prescrita: {input$dosis_prescrita} mL/kg/h") else NULL,
       if (!is.na(input$dosis_entregada)) glue("Dosis entregada: {input$dosis_entregada} mL/kg/h") else NULL,
+      if (!is.na(input$soporteVP))       glue("Soporte vasopresor: {paste(input$soporteVP, collapse = ', ')}") else NULL,
+      if (!is.na(input$soporteV))        glue("Soporte ventilatorio: {input$soporteV}") else NULL,
       "Perfil laboratorios:",
       glue("PO4 {input$fosforo} mg/dL | Mg {input$mg} mg/dL | K {input$k} mmol/L | Na {input$na} mmol/L | Cl {input$cl} mmol/L"),
       glue("Ca {input$ca} mg/dL | Cai {input$cai} mmol/L | Lactato {input$lactato} mmol/L | HCO3 {input$hco3} mmol/L"),
@@ -228,6 +240,31 @@ server <- function(input, output, session) {
     ), sep = "\n")
     
     output$texto_final <- renderText(nota)
+    
+    ##### boton para copiar la nota ####
+    # después de generar 'nota' en tu observeEvent(input$guardar,...)
+    # crea un reactiveVal para guardar la nota
+    
+    nota_val <- reactiveVal("")
+    
+    observe({
+      # supongamos que 'nota' es un reactive o una variable local
+      # si la construyes en un observeEvent, guárdala en un reactiveVal():
+      nota_val(nota)  # si usas: nota_val <- reactiveVal()
+      updateTextAreaInput(session, "nota_area", value = nota)
+    })
+    
+    # cuando pulsen 'copy_btn', ejecuta JS para copiar
+    observeEvent(input$copy_btn, {
+      runjs("
+    var ta = document.getElementById('nota_area');
+    ta.select();
+    document.execCommand('copy');
+  ")
+      showNotification("🗒️ Nota copiada al portapapeles", type = "message")
+    })
+    #####
+
     
     # Preparar datos para Supabase
     datos <- list(
@@ -325,6 +362,13 @@ server <- function(input, output, session) {
     }
     
   })
+  
+  texto_clinico <- reactive({
+    verbatimTextOutput("texto_final")
+  })
+    
+
+
 }
 
 shinyApp(ui, server)
