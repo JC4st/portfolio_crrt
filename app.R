@@ -148,15 +148,19 @@ ui <- fluidPage(
     ),
     mainPanel(
       # en UI
-      textAreaInput(
-        "nota_area", 
-        "Nota clínica generada", 
-        value = "",           # se irá actualizando desde el server
-        rows  = 10, 
-        width = "100%"
-      ),
       actionButton("copy_btn", "📋 Copiar nota"),
-      verbatimTextOutput("respuesta_supabase"),
+      tags$script(HTML("
+  Shiny.addCustomMessageHandler('copyToClipboard', function(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+")),
+      verbatimTextOutput("texto_final"),
+      verbatimTextOutput("respuesta_supabase")
       )
     )
   )
@@ -254,15 +258,7 @@ server <- function(input, output, session) {
       updateTextAreaInput(session, "nota_area", value = nota)
     })
     
-    # cuando pulsen 'copy_btn', ejecuta JS para copiar
-    observeEvent(input$copy_btn, {
-      runjs("
-    var ta = document.getElementById('nota_area');
-    ta.select();
-    document.execCommand('copy');
-  ")
-      showNotification("🗒️ Nota copiada al portapapeles", type = "message")
-    })
+
     #####
 
     
@@ -367,6 +363,13 @@ server <- function(input, output, session) {
     verbatimTextOutput("texto_final")
   })
     
+  # Copiar nota al portapapeles
+  # cuando pulsen 'copy_btn', ejecuta JS para copiar
+  observeEvent(input$copy_btn, {
+    nota <- input$nota_area
+    session$sendCustomMessage("copyToClipboard", nota)
+    showNotification("🗒️ Nota copiada al portapapeles", type = "message")
+  })
 
 
 }
