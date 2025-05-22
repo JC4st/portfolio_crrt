@@ -148,6 +148,13 @@ ui <- fluidPage(
     ),
     mainPanel(
       # en UI
+      textAreaInput(
+        "nota_area", 
+        "Nota clínica generada", 
+        value = "",     # se actualizará desde el server
+        rows  = 10, 
+        width = "100%"
+      ),
       actionButton("copy_btn", "📋 Copiar nota"),
       tags$script(HTML("
   Shiny.addCustomMessageHandler('copyToClipboard', function(text) {
@@ -159,7 +166,6 @@ ui <- fluidPage(
     document.body.removeChild(ta);
   });
 ")),
-      verbatimTextOutput("texto_final"),
       verbatimTextOutput("respuesta_supabase")
       )
     )
@@ -359,9 +365,9 @@ server <- function(input, output, session) {
     
   })
   
-  texto_clinico <- reactive({
-    verbatimTextOutput("texto_final")
-  })
+  # texto_clinico <- reactive({
+  #   verbatimTextOutput("texto_final")
+  # })
     
   # Copiar nota al portapapeles
   # cuando pulsen 'copy_btn', ejecuta JS para copiar
